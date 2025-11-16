@@ -173,11 +173,11 @@ exp :  NUM  { System.out.println("\tPUSHL $"+$1); }
 			System.out.println("\tMOVL _"+$1+", %EBX");
 
 			// Diminui
-			System.out.println("\tSUBL %EBX, %EAX");
+			System.out.println("\tSUBL %EAX, %EBX");
 
 			// Agora atribui a variável da esquerda
-			System.out.println("\tMOVL %EAX, _"+$1);
-			System.out.println("\tPUSHL %EAX");
+			System.out.println("\tMOVL %EBX, _"+$1);
+			System.out.println("\tPUSHL %EBX");
 		}
  		| ID   { System.out.println("\tPUSHL _"+$1); }
 	| INC ID {
