@@ -59,6 +59,8 @@ NL  = \n | \r | \r\n
 "<="   {  return Parser.LEQ; }
 ">="   {  return Parser.GEQ; }
 "!="   {  return Parser.NEQ; }
+"+="   {  return Parser.SEQ; }
+"-="   {  return Parser.MEQ; }
 
 "&&"   { return Parser.AND; }
 "||"   {  return Parser.OR; }

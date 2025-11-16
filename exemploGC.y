@@ -8,10 +8,10 @@
 
 %token ID, INT, FLOAT, BOOL, NUM, LIT, VOID, MAIN, READ, WRITE, IF, ELSE
 %token WHILE,TRUE, FALSE, IF, ELSE
-%token EQ, LEQ, GEQ, NEQ 
+%token EQ, LEQ, GEQ, NEQ SEQ MEQ
 %token AND, OR
 
-%right '='
+%right '=' SEQ MEQ
 %left OR
 %left AND
 %left  '>' '<' EQ LEQ GEQ NEQ
@@ -54,6 +54,8 @@ cmd :  ID '=' exp	';' {  System.out.println("\tPOPL %EDX");
   						   System.out.println("\tMOVL %EDX, _"+$1);
 					     }
 			| '{' lcmd '}' { System.out.println("\t\t# terminou o bloco..."); }
+		
+	  | exp ';'          { System.out.println("\tPOPL %EAX"); }
 					     
 					       
       | WRITE '(' LIT ')' ';' { strTab.add($3);
@@ -147,6 +149,34 @@ exp :  NUM  { System.out.println("\tPUSHL $"+$1); }
 			// resultado da expressão é o valor atribuído
 			System.out.println("\tPUSHL %EAX");
 		 }   
+		 | ID SEQ exp {
+			// RHS já deixou o valor no topo da pilha
+			System.out.println("\tPOPL %EAX");         // %EAX = RHS
+
+			// Coloca o conteúdo do ID no outro operador
+			System.out.println("\tMOVL _"+$1+", %EBX");
+
+			// Soma
+			System.out.println("\tADDL %EBX, %EAX");
+
+			// Agora atribui a variável da esquerda
+			System.out.println("\tMOVL %EAX, _"+$1);
+			System.out.println("\tPUSHL %EAX");
+		}
+		| ID MEQ exp {
+			// RHS já deixou o valor no topo da pilha
+			System.out.println("\tPOPL %EAX");         // %EAX = RHS
+
+			// Coloca o conteúdo do ID no outro operador
+			System.out.println("\tMOVL _"+$1+", %EBX");
+
+			// Soma
+			System.out.println("\tSUBL %EBX, %EAX");
+
+			// Agora atribui a variável da esquerda
+			System.out.println("\tMOVL %EAX, _"+$1);
+			System.out.println("\tPUSHL %EAX");
+		}
  		| ID   { System.out.println("\tPUSHL _"+$1); }
     | '(' exp	')' 
     | '!' exp       { gcExpNot(); }
