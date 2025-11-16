@@ -136,7 +136,17 @@ restoIf : ELSE  {
 
 exp :  NUM  { System.out.println("\tPUSHL $"+$1); } 
     |  TRUE  { System.out.println("\tPUSHL $1"); } 
-    |  FALSE  { System.out.println("\tPUSHL $0"); }      
+    |  FALSE  { System.out.println("\tPUSHL $0"); }
+		| ID '=' exp { 
+			// RHS já deixou o valor no topo da pilha
+			System.out.println("\tPOPL %EAX");         // %EAX = RHS
+
+			// grava o valor na variável
+			System.out.println("\tMOVL %EAX, _" + $1); // _ID = %EAX
+
+			// resultado da expressão é o valor atribuído
+			System.out.println("\tPUSHL %EAX");
+		 }   
  		| ID   { System.out.println("\tPUSHL _"+$1); }
     | '(' exp	')' 
     | '!' exp       { gcExpNot(); }
