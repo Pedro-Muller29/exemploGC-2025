@@ -9,11 +9,13 @@
 %token ID, INT, FLOAT, BOOL, NUM, LIT, VOID, MAIN, READ, WRITE, IF, ELSE
 %token WHILE,TRUE, FALSE, IF, ELSE
 %token EQ, LEQ, GEQ, NEQ SEQ MEQ
+%token INC, DEC
 %token AND, OR
 
 %right '=' SEQ MEQ
 %left OR
 %left AND
+%left INC, DEC
 %left  '>' '<' EQ LEQ GEQ NEQ
 %left '+' '-'
 %left '*' '/' '%'
@@ -170,7 +172,7 @@ exp :  NUM  { System.out.println("\tPUSHL $"+$1); }
 			// Coloca o conteúdo do ID no outro operador
 			System.out.println("\tMOVL _"+$1+", %EBX");
 
-			// Soma
+			// Diminui
 			System.out.println("\tSUBL %EBX, %EAX");
 
 			// Agora atribui a variável da esquerda
@@ -178,6 +180,36 @@ exp :  NUM  { System.out.println("\tPUSHL $"+$1); }
 			System.out.println("\tPUSHL %EAX");
 		}
  		| ID   { System.out.println("\tPUSHL _"+$1); }
+	| INC ID {
+		// Soma na variável e retorna novo valor
+		System.out.println("\tMOVL _"+$2+", %EAX");
+		System.out.println("\tINCL %EAX");
+		System.out.println("\tMOVL %EAX, _"+$2);
+		System.out.println("\tPUSHL %EAX");
+	}
+	| DEC ID {
+		// Diminui na variável e retorna novo valor
+		System.out.println("\tMOVL _"+$2+", %EAX");
+		System.out.println("\tDECL %EAX");
+		System.out.println("\tMOVL %EAX, _"+$2);
+		System.out.println("\tPUSHL %EAX");
+	}
+	| ID INC {
+		// Soma na variável e retorna antigo valor
+		System.out.println("\tMOVL _"+$1+", %EAX");
+		System.out.println("\tINCL %EAX");
+		System.out.println("\tMOVL %EAX, _"+$1);
+		System.out.println("\tDECL %EAX");
+		System.out.println("\tPUSHL %EAX");
+	}
+	| ID DEC {
+		// Diminui na variável e retorna antigo valor
+		System.out.println("\tMOVL _"+$1+", %EAX");
+		System.out.println("\tDECL %EAX");
+		System.out.println("\tMOVL %EAX, _"+$1);
+		System.out.println("\tINCL %EAX");
+		System.out.println("\tPUSHL %EAX");
+	}
     | '(' exp	')' 
     | '!' exp       { gcExpNot(); }
      

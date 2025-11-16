@@ -3,3 +3,6 @@
 *.s
 Parser.java
 Yylex.java
+teste*.o
+teste*.out
+teste*
