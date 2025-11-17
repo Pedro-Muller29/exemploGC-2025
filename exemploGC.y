@@ -11,6 +11,7 @@
 %token EQ, LEQ, GEQ, NEQ SEQ MEQ
 %token INC, DEC
 %token AND, OR
+%token CONTINUE, BREAK
 
 %right '=' SEQ MEQ
 %right '?' ':'       // ternary precedence (LOWER than OR/AND)
@@ -93,17 +94,28 @@ cmd :  ID '=' exp	';' {  System.out.println("\tPOPL %EDX");
 									
 								}
 
+	| CONTINUE ';' {
+		System.out.printf("\tJMP rot_%02d\n", (int)loopStack.peek());
+	}
+
+	| BREAK ';' {
+		System.out.printf("\tJMP rot_%02d\n", (int)loopStack.peek()+1);
+	}
+
 	| DO {
-		pRot.push(proxRot);  proxRot += 1;
-		System.out.printf("rot_%02d:\n",pRot.peek());
+		pRot.push(proxRot); loopStack.push(proxRot); proxRot += 2;
+		System.out.printf("rot_%02d:\n",pRot.peek()+1); // +1 Sempre deve ser o corpo
 	} cmd WHILE '(' exp ')' ';' {
+		System.out.printf("rot_%02d:\n",pRot.peek()); // Importante para comandos CONTINUE
 		System.out.println("\tPOPL %EAX");
 		System.out.println("\tCMPL $0, %EAX");
-		System.out.printf("\tJNE rot_%02d\n", (int)pRot.peek());
+		System.out.printf("\tJNE rot_%02d\n", (int)pRot.peek()+1);
+		pRot.pop();
+		loopStack.pop();
 	}
          
     | WHILE {
-					pRot.push(proxRot);  proxRot += 2;
+					pRot.push(proxRot); loopStack.push(proxRot); proxRot += 2;
 					System.out.printf("rot_%02d:\n",pRot.peek());
 				  } 
 			 '(' exp ')' {
@@ -115,7 +127,8 @@ cmd :  ID '=' exp	';' {  System.out.println("\tPOPL %EDX");
 				  		System.out.printf("\tJMP rot_%02d   # terminou cmd na linha de cima\n", pRot.peek());
 							System.out.printf("rot_%02d:\n",(int)pRot.peek()+1);
 							pRot.pop();
-							}  
+							loopStack.pop();
+						}  
 							
 			| IF '(' exp {	
 											pRot.push(proxRot);  proxRot += 2;
@@ -247,6 +260,8 @@ exp
 
   private Stack<Integer> pRot = new Stack<Integer>();
   private int proxRot = 1;
+
+  private Stack<Integer> loopStack = new Stack<>(); // tem o label do pRot de quando os loops foram abertos
 
 
   public static int ARRAY = 100;
