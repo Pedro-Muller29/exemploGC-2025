@@ -103,13 +103,42 @@ cmd :  ID '=' exp	';' {  System.out.println("\tPOPL %EDX");
 	}
 
 	| DO {
-		pRot.push(proxRot); loopStack.push(proxRot); proxRot += 2;
-		System.out.printf("rot_%02d:\n",pRot.peek()+1); // +1 Sempre deve ser o corpo
+		pRot.push(proxRot); loopStack.push(proxRot); proxRot += 3;
+		System.out.printf("rot_%02d:\n",pRot.peek()+2); // +2 para evitar conflitos com continue e break
 	} cmd WHILE '(' exp ')' ';' {
-		System.out.printf("rot_%02d:\n",pRot.peek()); // Importante para comandos CONTINUE
+		System.out.printf("rot_%02d:\n",pRot.peek()); // +0 é onde o continue vai
 		System.out.println("\tPOPL %EAX");
 		System.out.println("\tCMPL $0, %EAX");
-		System.out.printf("\tJNE rot_%02d\n", (int)pRot.peek()+1);
+		System.out.printf("\tJNE rot_%02d\n", (int)pRot.peek()+2);
+		System.out.printf("rot_%02d:\n",pRot.peek()+1); // +1 é onde o break vai
+		pRot.pop();
+		loopStack.pop();
+	}
+
+	| FOR '(' optExp ';' {
+		if (optExpHasValue) System.out.println("\tPOPL %EAX"); // só remove da pilha, nada é feito com ele
+		pRot.push(proxRot); loopStack.push(proxRot); proxRot += 4;
+		System.out.printf("rot_%02d:\n",pRot.peek()+2); // +2 para nao interferir em BREAK e CONTINUE, nenhum deles vem para cá
+	} optExp ';' {
+		// se for verdadeiro, vai para o corpo do for, caso contrário para o fim
+		if (optExpHasValue) {
+			System.out.println("\tPOPL %EAX");
+			System.out.println("\tCMP $0, %EAX");
+			System.out.printf("\tJE rot_%02d\n", (int)pRot.peek()+1); // sai do for
+		}
+		System.out.printf("\tJMP rot_%02d\n", (int)pRot.peek()+3);
+
+		// continue deve vir para cá
+		System.out.printf("rot_%02d:\n",pRot.peek()); // +0 para o continue vir
+	} optExp ')' {
+		if (optExpHasValue) {
+			System.out.println("\tPOPL %EAX"); // desempilha sem usar
+		}
+		System.out.printf("\tJMP rot_%02d\n", (int)pRot.peek()+2);
+		System.out.printf("rot_%02d:\n",pRot.peek()+3);
+	} cmd {
+		System.out.printf("\tJMP rot_%02d\n", (int)pRot.peek());
+		System.out.printf("rot_%02d:\n",pRot.peek()+1); // +1 onde o break vai	
 		pRot.pop();
 		loopStack.pop();
 	}
@@ -158,6 +187,11 @@ restoIf : ELSE  {
 				System.out.printf("rot_%02d:\n",pRot.peek());
 				} 
 		;										
+
+optExp
+    : exp         { optExpHasValue = true; }
+    |             { optExpHasValue = false; }
+    ;
 
 exp
     : exp OR exp               { gcExpLog(OR); }
@@ -263,6 +297,7 @@ exp
 
   private Stack<Integer> loopStack = new Stack<>(); // tem o label do pRot de quando os loops foram abertos
 
+  private boolean optExpHasValue = false;
 
   public static int ARRAY = 100;
 
