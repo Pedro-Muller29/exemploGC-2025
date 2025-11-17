@@ -13,13 +13,14 @@
 %token AND, OR
 
 %right '=' SEQ MEQ
+%right '?' ':'       // ternary precedence (LOWER than OR/AND)
 %left OR
 %left AND
-%left INC, DEC
-%left  '>' '<' EQ LEQ GEQ NEQ
+%left INC DEC
+%left '>' '<' EQ LEQ GEQ NEQ
 %left '+' '-'
 %left '*' '/' '%'
-%left '!' 
+%left '!'
 
 %type <sval> ID
 %type <sval> LIT
@@ -126,7 +127,6 @@ cmd :  ID '=' exp	';' {  System.out.println("\tPOPL %EDX");
 restoIf : ELSE  {
 											System.out.printf("\tJMP rot_%02d\n", pRot.peek()+1);
 											System.out.printf("rot_%02d:\n",pRot.peek());
-								
 										} 							
 							cmd  
 							
@@ -137,100 +137,95 @@ restoIf : ELSE  {
 				} 
 		;										
 
+exp
+    : exp OR exp               { gcExpLog(OR); }
+    | exp AND exp              { gcExpLog(AND); }
 
-exp :  NUM  { System.out.println("\tPUSHL $"+$1); } 
-    |  TRUE  { System.out.println("\tPUSHL $1"); } 
-    |  FALSE  { System.out.println("\tPUSHL $0"); }
-		| ID '=' exp { 
-			// RHS já deixou o valor no topo da pilha
-			System.out.println("\tPOPL %EAX");         // %EAX = RHS
+    | exp '>' exp              { gcExpRel('>'); }
+    | exp '<' exp              { gcExpRel('<'); }
+    | exp EQ exp               { gcExpRel(EQ); }
+    | exp LEQ exp              { gcExpRel(LEQ); }
+    | exp GEQ exp              { gcExpRel(GEQ); }
+    | exp NEQ exp              { gcExpRel(NEQ); }
 
-			// grava o valor na variável
-			System.out.println("\tMOVL %EAX, _" + $1); // _ID = %EAX
+    | exp '+' exp              { gcExpArit('+'); }
+    | exp '-' exp              { gcExpArit('-'); }
+    | exp '*' exp              { gcExpArit('*'); }
+    | exp '/' exp              { gcExpArit('/'); }
+    | exp '%' exp              { gcExpArit('%'); }
 
-			// resultado da expressão é o valor atribuído
-			System.out.println("\tPUSHL %EAX");
-		 }   
-		 | ID SEQ exp {
-			// RHS já deixou o valor no topo da pilha
-			System.out.println("\tPOPL %EAX");         // %EAX = RHS
+    | exp '?'  {
+                    pRot.push(proxRot); proxRot += 2;
+                    System.out.println("\tPOPL %EAX");
+                    System.out.println("\tCMPL $0, %EAX");
+                    System.out.printf("\tJE rot_%02d\n", pRot.peek());
+                }
+       exp ':' {
+                    System.out.printf("\tJMP rot_%02d\n", pRot.peek()+1);
+                    System.out.printf("rot_%02d:\n", pRot.peek());
+                }
+       exp {
+                    System.out.printf("rot_%02d:\n", pRot.peek()+1);
+                    pRot.pop();
+                }
 
-			// Coloca o conteúdo do ID no outro operador
-			System.out.println("\tMOVL _"+$1+", %EBX");
+    | '!' exp                   { gcExpNot(); }
 
-			// Soma
-			System.out.println("\tADDL %EBX, %EAX");
+    | '(' exp ')'              
 
-			// Agora atribui a variável da esquerda
-			System.out.println("\tMOVL %EAX, _"+$1);
-			System.out.println("\tPUSHL %EAX");
-		}
-		| ID MEQ exp {
-			// RHS já deixou o valor no topo da pilha
-			System.out.println("\tPOPL %EAX");         // %EAX = RHS
+    | NUM                       { System.out.println("\tPUSHL $" + $1); }
+    | TRUE                      { System.out.println("\tPUSHL $1"); }
+    | FALSE                     { System.out.println("\tPUSHL $0"); }
 
-			// Coloca o conteúdo do ID no outro operador
-			System.out.println("\tMOVL _"+$1+", %EBX");
+    | ID                        { System.out.println("\tPUSHL _" + $1); }
 
-			// Diminui
-			System.out.println("\tSUBL %EAX, %EBX");
+    | ID '=' exp                {
+                                   System.out.println("\tPOPL %EAX");
+                                   System.out.println("\tMOVL %EAX, _" + $1);
+                                   System.out.println("\tPUSHL %EAX");
+                                }
+    | ID SEQ exp                {
+                                   System.out.println("\tPOPL %EAX");
+                                   System.out.println("\tMOVL _" + $1 + ", %EBX");
+                                   System.out.println("\tADDL %EBX, %EAX");
+                                   System.out.println("\tMOVL %EAX, _" + $1);
+                                   System.out.println("\tPUSHL %EAX");
+                                }
+    | ID MEQ exp                {
+                                   System.out.println("\tPOPL %EAX");
+                                   System.out.println("\tMOVL _" + $1 + ", %EBX");
+                                   System.out.println("\tSUBL %EAX, %EBX");
+                                   System.out.println("\tMOVL %EBX, _" + $1);
+                                   System.out.println("\tPUSHL %EBX");
+                                }
 
-			// Agora atribui a variável da esquerda
-			System.out.println("\tMOVL %EBX, _"+$1);
-			System.out.println("\tPUSHL %EBX");
-		}
- 		| ID   { System.out.println("\tPUSHL _"+$1); }
-	| INC ID {
-		// Soma na variável e retorna novo valor
-		System.out.println("\tMOVL _"+$2+", %EAX");
-		System.out.println("\tINCL %EAX");
-		System.out.println("\tMOVL %EAX, _"+$2);
-		System.out.println("\tPUSHL %EAX");
-	}
-	| DEC ID {
-		// Diminui na variável e retorna novo valor
-		System.out.println("\tMOVL _"+$2+", %EAX");
-		System.out.println("\tDECL %EAX");
-		System.out.println("\tMOVL %EAX, _"+$2);
-		System.out.println("\tPUSHL %EAX");
-	}
-	| ID INC {
-		// Soma na variável e retorna antigo valor
-		System.out.println("\tMOVL _"+$1+", %EAX");
-		System.out.println("\tINCL %EAX");
-		System.out.println("\tMOVL %EAX, _"+$1);
-		System.out.println("\tDECL %EAX");
-		System.out.println("\tPUSHL %EAX");
-	}
-	| ID DEC {
-		// Diminui na variável e retorna antigo valor
-		System.out.println("\tMOVL _"+$1+", %EAX");
-		System.out.println("\tDECL %EAX");
-		System.out.println("\tMOVL %EAX, _"+$1);
-		System.out.println("\tINCL %EAX");
-		System.out.println("\tPUSHL %EAX");
-	}
-    | '(' exp	')' 
-    | '!' exp       { gcExpNot(); }
-     
-		| exp '+' exp		{ gcExpArit('+'); }
-		| exp '-' exp		{ gcExpArit('-'); }
-		| exp '*' exp		{ gcExpArit('*'); }
-		| exp '/' exp		{ gcExpArit('/'); }
-		| exp '%' exp		{ gcExpArit('%'); }
-																			
-		| exp '>' exp		{ gcExpRel('>'); }
-		| exp '<' exp		{ gcExpRel('<'); }											
-		| exp EQ exp		{ gcExpRel(EQ); }											
-		| exp LEQ exp		{ gcExpRel(LEQ); }											
-		| exp GEQ exp		{ gcExpRel(GEQ); }											
-		| exp NEQ exp		{ gcExpRel(NEQ); }											
-												
-		| exp OR exp		{ gcExpLog(OR); }											
-		| exp AND exp		{ gcExpLog(AND); }											
-		
-		;							
-
+    | INC ID                    {
+                                   System.out.println("\tMOVL _" + $2 + ", %EAX");
+                                   System.out.println("\tINCL %EAX");
+                                   System.out.println("\tMOVL %EAX, _" + $2);
+                                   System.out.println("\tPUSHL %EAX");
+                                }
+    | DEC ID                    {
+                                   System.out.println("\tMOVL _" + $2 + ", %EAX");
+                                   System.out.println("\tDECL %EAX");
+                                   System.out.println("\tMOVL %EAX, _" + $2);
+                                   System.out.println("\tPUSHL %EAX");
+                                }
+    | ID INC                    {
+                                   System.out.println("\tMOVL _" + $1 + ", %EAX");
+                                   System.out.println("\tINCL %EAX");
+                                   System.out.println("\tMOVL %EAX, _" + $1);
+                                   System.out.println("\tDECL %EAX");
+                                   System.out.println("\tPUSHL %EAX");
+                                }
+    | ID DEC                    {
+                                   System.out.println("\tMOVL _" + $1 + ", %EAX");
+                                   System.out.println("\tDECL %EAX");
+                                   System.out.println("\tMOVL %EAX, _" + $1);
+                                   System.out.println("\tINCL %EAX");
+                                   System.out.println("\tPUSHL %EAX");
+                                }
+    ;						
 
 %%
 
