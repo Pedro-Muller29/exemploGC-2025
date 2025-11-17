@@ -78,6 +78,7 @@ main   { return Parser.MAIN; }
 write   { return Parser.WRITE; }
 read   { return Parser.READ; }
 while   { return Parser.WHILE; }
+do   { return Parser.DO; }
 if   { return Parser.IF; }
 else   { return Parser.ELSE; }
 true   { return Parser.TRUE; }
